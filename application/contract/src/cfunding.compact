@@ -1,0 +1,65 @@
+pragma language_version >= 0.14.0;
+
+import CompactStandardLibrary;
+
+
+// Ledger variable declarations
+export ledger contributors: Map<Bytes<32>, Uint<128>>;
+export ledger instance: Counter;
+export ledger fundPoolTotal: QualifiedCoinInfo;
+export ledger fundGoal: Uint<32>;
+export ledger owner: Bytes<32>;
+export ledger ownerPublicKey: Maybe<ZswapCoinPublicKey>;
+
+
+constructor(){ 
+    ownerPublicKey = some<ZswapCoinPublicKey>(own_public_key());   
+    fundGoal = 30;
+    instance.increment(1);
+}
+
+witness local_secrete_key(): Bytes<32>;
+
+// NB: When a new instance of the function is decleared the addrs of the user deploying the instance of that contract and fundgoal is required
+export circuit initializeOwner(): [] {
+    owner = disclose(public_key(local_secrete_key(), instance as Field as Bytes<32>));
+}
+
+export circuit addContribution(coin: CoinInfo):[]{
+    assert fundPoolTotal.value < fundGoal "Funding Pool is closed";
+    assert coin.value > 5 "Must be more than 5 tDUST";
+    // Enablses the conract to e able to recieve coin and save it to the fundPoolTotal
+    receive(coin);
+    // Then add the funds and update ledger state accordingly
+    const pk = disclose(public_key(local_secrete_key(), instance as Field as Bytes<32>));
+    // Checked if user is already part of the list then increment account else add new user contribution
+    if(contributors.member(pk)){
+        const currentAmt = contributors.lookup(pk);
+        contributors.insert(pk, (currentAmt + coin.value) as Uint<128>);
+        fundPoolTotal.write_coin(merge_coin_immediate(fundPoolTotal, coin), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+    }else{
+        contributors.insert(pk, coin.value);
+        fundPoolTotal.write_coin(merge_coin_immediate(fundPoolTotal, coin), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+    }   
+}
+
+export circuit withdrawFunds():[]{
+    //Checking to make sure that the funding target has beeen met
+    assert fundPoolTotal.value >= fundGoal "Can't withdraw fund: Less than Fund target";
+    const requestingUserPk = disclose(public_key(local_secrete_key(), instance as Field as Bytes<32>));
+    assert owner == requestingUserPk "Unauthorized";
+    send(fundPoolTotal, left<ZswapCoinPublicKey, ContractAddress>(ownerPublicKey.value), fundPoolTotal.value);
+    // fundPoolTotal.write_coin();
+    instance.increment(1);
+}
+
+
+// Hashing function to make users secret_key remain secretive
+export circuit public_key(sk:Bytes<32>, rInstance: Bytes<32>): Bytes<32>{
+    return persistent_hash<Vector<2, Bytes<32>>>(
+        [
+            persistent_hash<Vector<2, Bytes<32>>>([pad(32, "cfunding:pk"), rInstance]),
+            sk
+        ]
+    );
+}

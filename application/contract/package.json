@@ -1,0 +1,32 @@
+{
+    "name": "@cfunding/cfunding-contract",
+    "version": "0.1.0",
+    "type": "module",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "license": "MIT",
+    "types": "./dist/index.d.ts",
+    "packageManager": "yarn@1.22.22",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "require": "./dist/index.js",
+            "import": "./dist/index.js",
+            "default": "./dist/index.js"
+        }
+    },
+    "scripts": {
+        "compact": "run-compactc src/cfunding.compact ./src/managed/cfunding",
+        "test": "jest --passWithNoTests",
+        "prepack": "yarn build",
+        "build": "rm -rf dist && tsc --project tsconfig.build.json && cp -Rf ./src/managed ./dist/managed && cp ./src/cfunding.compact ./dist",
+        "lint": "eslint src",
+        "typecheck": "tsc -p tsconfig.json --noEmit"
+    },
+    "devDependencies": {
+        "@cfunding/compact": "*",
+        "eslint": "^8.52.0",
+        "jest": "^29.7.0",
+        "typescript": "^5.2.2"
+    }
+}
