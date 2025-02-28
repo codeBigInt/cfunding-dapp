@@ -45,3 +45,6 @@ coverage
 *~
 
 *temp
+# Ignore large prover files
+application/contract/src/managed/cfunding/keys/*.prover
+application/contract/src/managed/cfunding/keys/*.verifier

@@ -1,1 +1,3 @@
-/src/managed
+# Ignore large prover files
+src/managed/cfunding/keys/*.prover
+src/managed/cfunding/keys/*.verifier
